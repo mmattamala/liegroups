@@ -78,9 +78,9 @@ class SO3Matrix(_base.SOMatrixBase):
         if not np.isclose(np.linalg.norm(quat), 1.):
             raise ValueError("Quaternion must be unit length")
 
-        if ordering is 'xyzw':
+        if ordering == 'xyzw':
             qx, qy, qz, qw = quat
-        elif ordering is 'wxyz':
+        elif ordering == 'wxyz':
             qw, qx, qy, qz = quat
         else:
             raise ValueError(
@@ -384,9 +384,9 @@ class SO3Quaternion(_base.VectorLieGroupBase):
     dof = 3
 
     def from_array(self, arr, ordering='wxyz'):
-        if ordering is 'xyzw':
+        if ordering == 'xyzw':
             self.data = arr[[3, 0, 1, 2]]
-        elif ordering is 'wxyz':
+        elif ordering == 'wxyz':
             self.data = arr
         else:
             raise ValueError(

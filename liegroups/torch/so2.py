@@ -124,6 +124,11 @@ class SO2Matrix(_base.SOMatrixBase):
         c = mat[:, 0, 0]
 
         return torch.atan2(s, c).squeeze_()
+    
+    def to(self, device=None, non_blocking=False):
+        """Sends the SO(2) object to device
+        """
+        return self.mat.to(device, non_blocking=non_blocking)
 
     def to_angle(self):
         """Recover the rotation angle in rad from the rotation matrix."""
