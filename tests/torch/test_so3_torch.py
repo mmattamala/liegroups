@@ -6,7 +6,7 @@ import numpy as np
 from liegroups.torch import SO3, utils
 
 
-def test_from_matrix():
+def test_from_matrix(device):
     C_good = SO3.from_matrix(torch.eye(3))
     assert isinstance(C_good, SO3) \
         and C_good.mat.dim() == 2 \
@@ -20,7 +20,7 @@ def test_from_matrix():
         and SO3.is_valid_matrix(C_bad.mat).all()
 
 
-def test_from_matrix_batch():
+def test_from_matrix_batch(device):
     C_good = SO3.from_matrix(torch.eye(3).repeat(5, 1, 1))
     assert isinstance(C_good, SO3) \
         and C_good.mat.dim() == 3 \
@@ -36,14 +36,14 @@ def test_from_matrix_batch():
         and SO3.is_valid_matrix(C_bad.mat).all()
 
 
-def test_identity():
+def test_identity(device):
     C = SO3.identity()
     assert isinstance(C, SO3) \
         and C.mat.dim() == 2 \
         and C.mat.shape == (3, 3)
 
 
-def test_identity_batch():
+def test_identity_batch(device):
     C = SO3.identity(5)
     assert isinstance(C, SO3) \
         and C.mat.dim() == 3 \
@@ -55,7 +55,7 @@ def test_identity_batch():
         and C_copy.mat.shape == (5, 3, 3)
 
 
-def test_dot():
+def test_dot(device):
     C = SO3(torch.Tensor([[0, -1, 0],
                           [1, 0, 0],
                           [0, 0, 1]]))
@@ -68,7 +68,7 @@ def test_dot():
     assert utils.allclose(C.dot(pt), Cpt)
 
 
-def test_dot_batch():
+def test_dot_batch(device):
     C1 = SO3(torch.Tensor([[0, -1, 0],
                            [1, 0, 0],
                            [0, 0, 1]]).expand(5, 3, 3))
@@ -123,13 +123,13 @@ def test_dot_batch():
         and utils.allclose(C3.dot(pt3), C3ptsbatch[:, 1, :])
 
 
-def test_wedge():
+def test_wedge(device):
     phi = torch.Tensor([1, 2, 3])
     Phi = SO3.wedge(phi)
     assert (Phi == -Phi.t()).all()
 
 
-def test_wedge_batch():
+def test_wedge_batch(device):
     phis = torch.Tensor([[1, 2, 3],
                          [4, 5, 6]])
     Phis = SO3.wedge(phis)
@@ -137,20 +137,20 @@ def test_wedge_batch():
     assert (Phis[1, :, :] == SO3.wedge(phis[1])).all()
 
 
-def test_wedge_vee():
+def test_wedge_vee(device):
     phi = torch.Tensor([1, 2, 3])
     Phi = SO3.wedge(phi)
     assert (phi == SO3.vee(Phi)).all()
 
 
-def test_wedge_vee_batch():
+def test_wedge_vee_batch(device):
     phis = torch.Tensor([[1, 2, 3],
                          [4, 5, 6]])
     Phis = SO3.wedge(phis)
     assert (phis == SO3.vee(Phis)).all()
 
 
-def test_left_jacobians():
+def test_left_jacobians(device):
     phi_small = torch.Tensor([0., 0., 0.])
     phi_big = torch.Tensor([np.pi / 2, np.pi / 3, np.pi / 4])
 
@@ -167,7 +167,7 @@ def test_left_jacobians():
         torch.eye(3))
 
 
-def test_left_jacobians_batch():
+def test_left_jacobians_batch(device):
     phis = torch.Tensor([[0., 0., 0.],
                          [np.pi / 2, np.pi / 3, np.pi / 4]])
 
@@ -177,7 +177,7 @@ def test_left_jacobians_batch():
                           torch.eye(3).unsqueeze_(dim=0).expand(2, 3, 3))
 
 
-def test_exp_log():
+def test_exp_log(device):
     C_big = SO3.exp(0.25 * np.pi * torch.ones(3))
     assert utils.allclose(SO3.exp(SO3.log(C_big)).mat, C_big.mat)
 
@@ -185,13 +185,13 @@ def test_exp_log():
     assert utils.allclose(SO3.exp(SO3.log(C_small)).mat, C_small.mat)
 
 
-def test_exp_log_batch():
+def test_exp_log_batch(device):
     C = SO3.exp(torch.Tensor([[1, 2, 3],
                               [0, 0, 0]]))
     assert utils.allclose(SO3.exp(SO3.log(C)).mat, C.mat)
 
 
-def test_perturb():
+def test_perturb(device):
     C = SO3.exp(0.25 * np.pi * torch.ones(3))
     C_copy = copy.deepcopy(C)
     phi = torch.Tensor([0.1, 0.2, 0.3])
@@ -200,7 +200,7 @@ def test_perturb():
         C.as_matrix(), (SO3.exp(phi).dot(C_copy)).as_matrix())
 
 
-def test_perturb_batch():
+def test_perturb_batch(device):
     C = SO3.exp(torch.Tensor([[1, 2, 3],
                               [4, 5, 6]]))
     C_copy1 = copy.deepcopy(C)
@@ -218,14 +218,14 @@ def test_perturb_batch():
                           (SO3.exp(phis).dot(C)).as_matrix())
 
 
-def test_normalize():
+def test_normalize(device):
     C = SO3.exp(0.25 * np.pi * torch.ones(3))
     C.mat.add_(0.1)
     C.normalize()
     assert SO3.is_valid_matrix(C.mat).all()
 
 
-def test_normalize_batch():
+def test_normalize_batch(device):
     C = SO3.exp(torch.Tensor([[1, 2, 3],
                               [4, 5, 6],
                               [0, 0, 0]]))
@@ -241,29 +241,29 @@ def test_normalize_batch():
     assert SO3.is_valid_matrix(C.mat).all()
 
 
-def test_inv():
+def test_inv(device):
     C = SO3.exp(0.25 * np.pi * torch.ones(3))
     assert utils.allclose(C.dot(C.inv()).mat, SO3.identity().mat)
 
 
-def test_inv_batch():
+def test_inv_batch(device):
     C = SO3.exp(torch.Tensor([[1, 2, 3],
                               [4, 5, 6]]))
     assert utils.allclose(C.dot(C.inv()).mat, SO3.identity(C.mat.shape[0]).mat)
 
 
-def test_adjoint():
+def test_adjoint(device):
     C = SO3.exp(0.25 * np.pi * torch.ones(3))
     assert (C.adjoint() == C.mat).all()
 
 
-def test_adjoint_batch():
+def test_adjoint_batch(device):
     C = SO3.exp(torch.Tensor([[1, 2, 3],
                               [4, 5, 6]]))
     assert (C.adjoint() == C.mat).all()
 
 
-def test_rotx():
+def test_rotx(device):
     C_got = SO3.rotx(torch.Tensor([np.pi / 2]))
     C_expected = torch.Tensor([[1, 0, 0],
                                [0, 0, -1],
@@ -271,7 +271,7 @@ def test_rotx():
     assert utils.allclose(C_got.mat, C_expected)
 
 
-def test_rotx_batch():
+def test_rotx_batch(device):
     C_got = SO3.rotx(torch.Tensor([np.pi / 2, np.pi]))
     C_expected = torch.cat([torch.Tensor([[1, 0, 0],
                                           [0, 0, -1],
@@ -282,7 +282,7 @@ def test_rotx_batch():
     assert utils.allclose(C_got.mat, C_expected)
 
 
-def test_roty():
+def test_roty(device):
     C_got = SO3.roty(torch.Tensor([np.pi / 2]))
     C_expected = torch.Tensor([[0, 0, 1],
                                [0, 1, 0],
@@ -290,7 +290,7 @@ def test_roty():
     assert utils.allclose(C_got.mat, C_expected)
 
 
-def test_roty_batch():
+def test_roty_batch(device):
     C_got = SO3.roty(torch.Tensor([np.pi / 2, np.pi]))
     C_expected = torch.cat([torch.Tensor([[0, 0, 1],
                                           [0, 1, 0],
@@ -301,7 +301,7 @@ def test_roty_batch():
     assert utils.allclose(C_got.mat, C_expected)
 
 
-def test_rotz():
+def test_rotz(device):
     C_got = SO3.rotz(torch.Tensor([np.pi / 2]))
     C_expected = torch.Tensor([[0, -1, 0],
                                [1, 0, 0],
@@ -309,7 +309,7 @@ def test_rotz():
     assert utils.allclose(C_got.mat, C_expected)
 
 
-def test_rotz_batch():
+def test_rotz_batch(device):
     C_got = SO3.rotz(torch.Tensor([np.pi / 2, np.pi]))
     C_expected = torch.cat([torch.Tensor([[0, -1, 0],
                                           [1, 0, 0],
@@ -320,7 +320,7 @@ def test_rotz_batch():
     assert utils.allclose(C_got.mat, C_expected)
 
 
-def test_rpy():
+def test_rpy(device):
     rpy = torch.Tensor([np.pi / 12, np.pi / 6, np.pi / 3])
     C_got = SO3.from_rpy(rpy)
     C_expected = SO3.rotz(torch.Tensor([rpy[2]])).dot(
@@ -331,7 +331,7 @@ def test_rpy():
     assert utils.allclose(C_got.mat, C_expected.mat)
 
 
-def test_rpy_batch():
+def test_rpy_batch(device):
     rpy = torch.Tensor([[np.pi / 12, np.pi / 6, np.pi / 3],
                         [0, 0, 0]])
     C_got = SO3.from_rpy(rpy)
@@ -343,7 +343,7 @@ def test_rpy_batch():
     assert utils.allclose(C_got.mat, C_expected.mat)
 
 
-def test_quaternion():
+def test_quaternion(device):
     q1 = torch.Tensor([1, 0, 0, 0])
     q2 = torch.Tensor([0, 1, 0, 0])
     q3 = torch.Tensor([0, 0, 1, 0])
@@ -360,7 +360,7 @@ def test_quaternion():
                           SO3.from_quaternion(q6).mat)
 
 
-def test_quaternion_batch():
+def test_quaternion_batch(device):
     quats = torch.Tensor([[1, 0, 0, 0],
                           [0, 1, 0, 0],
                           [0, 0, 1, 0],

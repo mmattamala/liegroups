@@ -95,7 +95,7 @@ class SE2Matrix(_base.SEMatrixBase):
         if p.dim() < 2:
             p = p.unsqueeze(dim=0)  # vector --> vectorbatch
 
-        result = p.__class__(p.shape[0], p.shape[1], cls.dof).zero_()
+        result = p.__class__(p.shape[0], p.shape[1], cls.dof).zero_().to(p.device)
 
         # Got euclidean coordinates
         if p.shape[1] == cls.dim - 1:
@@ -103,11 +103,11 @@ class SE2Matrix(_base.SEMatrixBase):
             # vector, in which case the scale is 0
             if not directional:
                 result[:, 0:2, 0:2] = torch.eye(
-                    cls.RotationType.dim).unsqueeze_(dim=0).expand(
+                    cls.RotationType.dim, device=p.device).unsqueeze_(dim=0).expand(
                         p.shape[0], cls.RotationType.dim, cls.RotationType.dim)
 
             result[:, 0:2, 2] = torch.mm(
-                cls.RotationType.wedge(p.__class__([1.])),
+                cls.RotationType.wedge(p.__class__([1.]).to(p.device)),
                 p.transpose(1, 0)).transpose_(1, 0)
 
         # Got homogeneous coordinates
@@ -115,11 +115,11 @@ class SE2Matrix(_base.SEMatrixBase):
             result[:, 0:2, 0:2] = \
                 p[:, 2].unsqueeze_(dim=1).unsqueeze_(dim=2) * \
                 torch.eye(
-                cls.RotationType.dim).unsqueeze_(dim=0).repeat(
+                cls.RotationType.dim, device=p.device).unsqueeze_(dim=0).repeat(
                 p.shape[0], 1, 1)
 
             result[:, 0:2, 2] = torch.mm(
-                cls.RotationType.wedge(p.__class__([1.])),
+                cls.RotationType.wedge(p.__class__([1.]).to(p.device)),
                 p[:, 0:2].transpose_(1, 0)).transpose_(1, 0)
 
         # Got wrong dimension

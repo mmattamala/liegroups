@@ -214,7 +214,7 @@ class SO3Matrix(_base.SOMatrixBase):
         else:
             mat = self.mat
 
-        phi = mat.new_empty(mat.shape[0], self.dof)
+        phi = mat.new_empty(mat.shape[0], self.dof, device=mat.device)
 
         # The cosine of the rotation angle is related to the utils.trace of C
         # Clamp to its proper domain to avoid NaNs from rounding errors
@@ -295,7 +295,7 @@ class SO3Matrix(_base.SOMatrixBase):
     def to(self, device=None, non_blocking=False):
         """Sends the SO(3) object to device
         """
-        return self.mat.to(device, non_blocking=non_blocking)
+        return self.__class__(self.mat.to(device=device, non_blocking=non_blocking))
 
     def to_quaternion(self, ordering='wxyz'):
         """Convert a rotation matrix to a unit length quaternion.

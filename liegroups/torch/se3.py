@@ -157,7 +157,7 @@ class SE3Matrix(_base.SEMatrixBase):
 
             # Create an identity matrix with a tensor type that matches the input
             I = phi.new_empty(cls.dof, cls.dof)
-            torch.eye(cls.dof, out=I)
+            torch.eye(cls.dof, out=I, device=xi.device)
 
             jac[small_angle_inds] = \
                 I.expand_as(jac[small_angle_inds]) - \
@@ -207,7 +207,7 @@ class SE3Matrix(_base.SEMatrixBase):
         if len(small_angle_inds) > 0:
             # Create an identity matrix with a tensor type that matches the input
             I = phi.new_empty(cls.dof, cls.dof)
-            torch.eye(cls.dof, out=I)
+            torch.eye(cls.dof, out=I, device=xi.device)
 
             jac[small_angle_inds] = \
                 I.expand_as(jac[small_angle_inds]) + \
@@ -261,14 +261,14 @@ class SE3Matrix(_base.SEMatrixBase):
         if p.dim() < 2:
             p = p.unsqueeze(dim=0)  # vector --> vectorbatch
 
-        result = p.new_empty(p.shape[0], p.shape[1], cls.dof).zero_()
+        result = p.new_empty(p.shape[0], p.shape[1], cls.dof).zero_().to(p.device)
 
         # Got euclidean coordinates
         if p.shape[1] == cls.dim - 1:
             # Assume scale parameter is 1 unless p is a direction
             # vector, in which case the scale is 0
             if not directional:
-                result[:, :3, :3] = torch.eye(3, dtype=p.dtype).unsqueeze_(dim=0).expand(
+                result[:, :3, :3] = torch.eye(3, dtype=p.dtype, device=p.device).unsqueeze_(dim=0).expand(
                     p.shape[0], 3, 3)
 
             result[:, :3, 3:] = cls.RotationType.wedge(-p)
@@ -277,7 +277,7 @@ class SE3Matrix(_base.SEMatrixBase):
         elif p.shape[1] == cls.dim:
             result[:, :3, :3] = \
                 p[:, 3].unsqueeze_(dim=1).unsqueeze_(dim=2) * \
-                torch.eye(3, dtype=p.dtype).unsqueeze_(dim=0).repeat(
+                torch.eye(3, dtype=p.dtype, device=p.device).unsqueeze_(dim=0).repeat(
                 p.shape[0], 1, 1)
 
             result[:, :3, 3:] = cls.RotationType.wedge(-p[:, :3])

@@ -136,6 +136,8 @@ class SOMatrixBase(_base.SOMatrixBase):
         #                                       np.linalg.det(V.cpu().numpy()))
         # mat_normalized = U.mm(S).mm(V.t_())
 
+        device = mat.device
+
         # pytorch SVD seems to be inaccurate, so just move to numpy immediately
         mat_cpu = mat.detach().cpu().numpy().squeeze()
         U, _, V = np.linalg.svd(mat_cpu, full_matrices=False)
@@ -145,7 +147,7 @@ class SOMatrixBase(_base.SOMatrixBase):
         mat_normalized = mat.__class__(U.dot(S).dot(V))
 
         mat.copy_(mat_normalized)
-        return mat
+        return mat.to(device)
 
     def normalize(self, inds=None):
         if self.mat.dim() < 3:
@@ -280,7 +282,7 @@ class SEMatrixBase(_base.SEMatrixBase):
                     "Vector or vector-batch must have shape ({},), ({},), (N,{}), (N,{}), ({},N,{}), or ({},N,{})".format(self.dim - 1, self.dim, self.dim - 1, self.dim, batch_size, self.dim - 1, batch_size, self.dim))
 
     @classmethod
-    def from_matrix(cls, mat, normalize=False, device="cpu"):
+    def from_matrix(cls, mat, normalize=False):
         if mat.dim() < 3:
             mat = mat.unsqueeze(dim=0)
 
@@ -294,7 +296,7 @@ class SEMatrixBase(_base.SEMatrixBase):
             if normalize:
                 result.normalize(inds=mat_is_valid.logical_not().nonzero(as_tuple=False))
 
-            return result.to(device)
+            return result
         else:
             raise ValueError(
                 "Invalid transformation matrix. Use normalize=True to handle rounding errors.")
@@ -311,7 +313,7 @@ class SEMatrixBase(_base.SEMatrixBase):
         return cls(rot, trans)
 
     @classmethod
-    def identity(cls, batch_size=1, copy=False, device="cpu"):
+    def identity(cls, batch_size=1, copy=False, device=None):
         if copy:
             mat = torch.eye(cls.dim, device=device).repeat(batch_size, 1, 1)
         else:
