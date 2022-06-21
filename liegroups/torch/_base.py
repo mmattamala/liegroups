@@ -72,11 +72,11 @@ class SOMatrixBase(_base.SOMatrixBase):
         return cls(mat)
 
     @classmethod
-    def identity(cls, batch_size=1, copy=False):
+    def identity(cls, batch_size=1, copy=False, device="cpu"):
         if copy:
-            mat = torch.eye(cls.dim).repeat(batch_size, 1, 1)
+            mat = torch.eye(cls.dim, device=device).repeat(batch_size, 1, 1)
         else:
-            mat = torch.eye(cls.dim).expand(
+            mat = torch.eye(cls.dim, device=device).expand(
                 batch_size, cls.dim, cls.dim).squeeze()
         return cls(mat)
 
@@ -112,11 +112,11 @@ class SOMatrixBase(_base.SOMatrixBase):
 
         # Determinants of each matrix in the batch should be 1
         det_check = utils.isclose(mat.__class__(
-            np.linalg.det(mat.detach().cpu().numpy())), 1.)
+            np.linalg.det(mat.detach().cpu().numpy())), 1.).to(mat.device)
 
         # The transpose of each matrix in the batch should be its inverse
         inv_check = utils.isclose(mat.transpose(2, 1).bmm(mat),
-                                  torch.eye(cls.dim, dtype=mat.dtype)).sum(dim=1).sum(dim=1) \
+                                  torch.eye(cls.dim, dtype=mat.dtype, device=mat.device)).sum(dim=1).sum(dim=1) \
             == cls.dim * cls.dim
 
         return shape_check & det_check & inv_check
@@ -136,6 +136,8 @@ class SOMatrixBase(_base.SOMatrixBase):
         #                                       np.linalg.det(V.cpu().numpy()))
         # mat_normalized = U.mm(S).mm(V.t_())
 
+        device = mat.device
+
         # pytorch SVD seems to be inaccurate, so just move to numpy immediately
         mat_cpu = mat.detach().cpu().numpy().squeeze()
         U, _, V = np.linalg.svd(mat_cpu, full_matrices=False)
@@ -145,13 +147,13 @@ class SOMatrixBase(_base.SOMatrixBase):
         mat_normalized = mat.__class__(U.dot(S).dot(V))
 
         mat.copy_(mat_normalized)
-        return mat
+        return mat.to(device)
 
     def normalize(self, inds=None):
         if self.mat.dim() < 3:
             self._normalize_one(self.mat)
         else:
-            if inds is None:
+            if inds == None:
                 inds = range(self.mat.shape[0])
 
             for batch_ind in inds:
@@ -311,11 +313,11 @@ class SEMatrixBase(_base.SEMatrixBase):
         return cls(rot, trans)
 
     @classmethod
-    def identity(cls, batch_size=1, copy=False):
+    def identity(cls, batch_size=1, copy=False, device=None):
         if copy:
-            mat = torch.eye(cls.dim).repeat(batch_size, 1, 1)
+            mat = torch.eye(cls.dim, device=device).repeat(batch_size, 1, 1)
         else:
-            mat = torch.eye(cls.dim).expand(batch_size, cls.dim, cls.dim)
+            mat = torch.eye(cls.dim, device=device).expand(batch_size, cls.dim, cls.dim)
 
         return cls.from_matrix(mat.squeeze_())
 
@@ -376,6 +378,11 @@ class SEMatrixBase(_base.SEMatrixBase):
         See: http://pytorch.org/docs/master/notes/cuda.html?highlight=pinned
         """
         return self.__class__(self.rot.pin_memory(), self.trans.pin_memory())
+    
+    def to(self, device=None, non_blocking=False):
+        """Return a copy with the underlying tensors on the GPU."""
+        return self.__class__(self.rot.to(device=device, non_blocking=non_blocking),
+                              self.trans.to(device=device, non_blocking=non_blocking))
 
 
 class VectorLieGroupBase(_base.VectorLieGroupBase):

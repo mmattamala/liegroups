@@ -31,7 +31,7 @@ class SO3Matrix(_base.SOMatrixBase):
 
         if len(small_angle_inds) > 0:
             mat[small_angle_inds] = \
-                torch.eye(cls.dim, dtype=phi.dtype).expand_as(mat[small_angle_inds]) + \
+                torch.eye(cls.dim, dtype=phi.dtype, device=phi.device).expand_as(mat[small_angle_inds]) + \
                 cls.wedge(phi[small_angle_inds])
 
         # Otherwise...
@@ -47,7 +47,7 @@ class SO3Matrix(_base.SOMatrixBase):
             c = angle.cos().unsqueeze_(dim=1).unsqueeze_(
                 dim=2).expand_as(mat[large_angle_inds])
 
-            A = c * torch.eye(cls.dim, dtype=phi.dtype).unsqueeze_(dim=0).expand_as(
+            A = c * torch.eye(cls.dim, dtype=phi.dtype, device=phi.device).unsqueeze_(dim=0).expand_as(
                 mat[large_angle_inds])
             B = (1. - c) * utils.outer(axis, axis)
             C = s * cls.wedge(axis)
@@ -68,12 +68,12 @@ class SO3Matrix(_base.SOMatrixBase):
         if not utils.allclose(quat.norm(p=2, dim=1), 1.):
             raise ValueError("Quaternions must be unit length")
 
-        if ordering is 'xyzw':
+        if ordering == 'xyzw':
             qx = quat[:, 0]
             qy = quat[:, 1]
             qz = quat[:, 2]
             qw = quat[:, 3]
-        elif ordering is 'wxyz':
+        elif ordering == 'wxyz':
             qw = quat[:, 0]
             qx = quat[:, 1]
             qy = quat[:, 2]
@@ -132,7 +132,7 @@ class SO3Matrix(_base.SOMatrixBase):
         small_angle_inds = small_angle_mask.nonzero(as_tuple=False).squeeze_(dim=1)
         if len(small_angle_inds) > 0:
             jac[small_angle_inds] = \
-                torch.eye(cls.dof, dtype=phi.dtype).expand_as(jac[small_angle_inds]) - \
+                torch.eye(cls.dof, dtype=phi.dtype, device=phi.device).expand_as(jac[small_angle_inds]) - \
                 0.5 * cls.wedge(phi[small_angle_inds])
 
         # Otherwise...
@@ -153,7 +153,7 @@ class SO3Matrix(_base.SOMatrixBase):
                 dim=2).expand_as(jac[large_angle_inds])
 
             A = hacha * \
-                torch.eye(cls.dof, dtype=phi.dtype).unsqueeze_(
+                torch.eye(cls.dof, dtype=phi.dtype, device=phi.device).unsqueeze_(
                     dim=0).expand_as(jac[large_angle_inds])
             B = (1. - hacha) * utils.outer(axis, axis)
             C = -ha * cls.wedge(axis)
@@ -179,7 +179,7 @@ class SO3Matrix(_base.SOMatrixBase):
         small_angle_inds = small_angle_mask.nonzero(as_tuple=False).squeeze_(dim=1)
         if len(small_angle_inds) > 0:
             jac[small_angle_inds] = \
-                torch.eye(cls.dof, dtype=phi.dtype).expand_as(jac[small_angle_inds]) + \
+                torch.eye(cls.dof, dtype=phi.dtype, device=phi.device).expand_as(jac[small_angle_inds]) + \
                 0.5 * cls.wedge(phi[small_angle_inds])
 
         # Otherwise...
@@ -195,7 +195,7 @@ class SO3Matrix(_base.SOMatrixBase):
 
             A = (s / angle).unsqueeze_(dim=1).unsqueeze_(
                 dim=2).expand_as(jac[large_angle_inds]) * \
-                torch.eye(cls.dof, dtype=phi.dtype).unsqueeze_(dim=0).expand_as(
+                torch.eye(cls.dof, dtype=phi.dtype, device=phi.device).unsqueeze_(dim=0).expand_as(
                 jac[large_angle_inds])
             B = (1. - s / angle).unsqueeze_(dim=1).unsqueeze_(
                 dim=2).expand_as(jac[large_angle_inds]) * \
@@ -214,7 +214,7 @@ class SO3Matrix(_base.SOMatrixBase):
         else:
             mat = self.mat
 
-        phi = mat.new_empty(mat.shape[0], self.dof)
+        phi = mat.new_empty(mat.shape[0], self.dof, device=mat.device)
 
         # The cosine of the rotation angle is related to the utils.trace of C
         # Clamp to its proper domain to avoid NaNs from rounding errors
@@ -228,7 +228,7 @@ class SO3Matrix(_base.SOMatrixBase):
         if len(small_angle_inds) > 0:
             phi[small_angle_inds, :] = \
                 self.vee(mat[small_angle_inds] -
-                         torch.eye(self.dim, dtype=mat.dtype).expand_as(mat[small_angle_inds]))
+                         torch.eye(self.dim, dtype=mat.dtype, device=mat.device).expand_as(mat[small_angle_inds]))
 
         # Otherwise...
         large_angle_mask = small_angle_mask.logical_not()
@@ -291,6 +291,11 @@ class SO3Matrix(_base.SOMatrixBase):
         mat[:, 1, 1] = c
 
         return cls(mat.squeeze_())
+
+    def to(self, device=None, non_blocking=False):
+        """Sends the SO(3) object to device
+        """
+        return self.__class__(self.mat.to(device=device, non_blocking=non_blocking))
 
     def to_quaternion(self, ordering='wxyz'):
         """Convert a rotation matrix to a unit length quaternion.
@@ -359,12 +364,12 @@ class SO3Matrix(_base.SOMatrixBase):
             qz[far_zero_inds] = (R_fz[:, 1, 0] - R_fz[:, 0, 1]) / d
 
         # Check ordering last
-        if ordering is 'xyzw':
+        if ordering == 'xyzw':
             quat = torch.cat([qx.unsqueeze_(dim=1),
                               qy.unsqueeze_(dim=1),
                               qz.unsqueeze_(dim=1),
                               qw.unsqueeze_(dim=1)], dim=1).squeeze_()
-        elif ordering is 'wxyz':
+        elif ordering == 'wxyz':
             quat = torch.cat([qw.unsqueeze_(dim=1),
                               qx.unsqueeze_(dim=1),
                               qy.unsqueeze_(dim=1),

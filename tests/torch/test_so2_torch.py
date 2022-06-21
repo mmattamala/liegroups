@@ -6,7 +6,7 @@ import numpy as np
 from liegroups.torch import SO2, utils
 
 
-def test_from_matrix():
+def test_from_matrix(device):
     C_good = SO2.from_matrix(torch.eye(2))
     assert isinstance(C_good, SO2) \
         and C_good.mat.dim() == 2 \
@@ -20,7 +20,7 @@ def test_from_matrix():
         and SO2.is_valid_matrix(C_bad.mat).all()
 
 
-def test_from_matrix_batch():
+def test_from_matrix_batch(device):
     C_good = SO2.from_matrix(torch.eye(2).repeat(5, 1, 1))
     assert isinstance(C_good, SO2) \
         and C_good.mat.dim() == 3 \
@@ -36,14 +36,14 @@ def test_from_matrix_batch():
         and SO2.is_valid_matrix(C_bad.mat).all()
 
 
-def test_identity():
+def test_identity(device):
     C = SO2.identity()
     assert isinstance(C, SO2) \
         and C.mat.dim() == 2 \
         and C.mat.shape == (2, 2)
 
 
-def test_identity_batch():
+def test_identity_batch(device):
     C = SO2.identity(5)
     assert isinstance(C, SO2) \
         and C.mat.dim() == 3 \
@@ -55,17 +55,17 @@ def test_identity_batch():
         and C_copy.mat.shape == (5, 2, 2)
 
 
-def test_from_angle_to_angle():
+def test_from_angle_to_angle(device):
     angle = torch.Tensor([np.pi / 2.])
     assert utils.allclose(SO2.from_angle(angle).to_angle(), angle)
 
 
-def test_from_angle_to_angle_batch():
+def test_from_angle_to_angle_batch(device):
     angles = torch.Tensor([-1., 0, 1.])
     assert utils.allclose(SO2.from_angle(angles).to_angle(), angles)
 
 
-def test_dot():
+def test_dot(device):
     C = SO2(torch.Tensor([[0, -1],
                           [1, 0]]))
     pt = torch.Tensor([1, 2])
@@ -77,7 +77,7 @@ def test_dot():
     assert utils.allclose(C.dot(pt), Cpt)
 
 
-def test_dot_batch():
+def test_dot_batch(device):
     C1 = SO2(torch.Tensor([[0, -1],
                            [1, 0]]).expand(5, 2, 2))
     C2 = SO2(torch.Tensor([[-1, 0],
@@ -130,32 +130,32 @@ def test_dot_batch():
         and utils.allclose(C2.dot(pt2), C2ptsbatch[:, 1, :])
 
 
-def test_wedge():
+def test_wedge(device):
     phi = torch.Tensor([1])
     Phi = SO2.wedge(phi)
     assert (Phi == -Phi.t()).all()
 
 
-def test_wedge_batch():
+def test_wedge_batch(device):
     phis = torch.Tensor([1, 2])
     Phis = SO2.wedge(phis)
     assert (Phis[0, :, :] == SO2.wedge(torch.Tensor([phis[0]]))).all()
     assert (Phis[1, :, :] == SO2.wedge(torch.Tensor([phis[1]]))).all()
 
 
-def test_wedge_vee():
+def test_wedge_vee(device):
     phi = torch.Tensor([1])
     Phi = SO2.wedge(phi)
     assert (phi == SO2.vee(Phi)).all()
 
 
-def test_wedge_vee_batch():
+def test_wedge_vee_batch(device):
     phis = torch.Tensor([1, 2])
     Phis = SO2.wedge(phis)
     assert (phis == SO2.vee(Phis)).all()
 
 
-def test_left_jacobians():
+def test_left_jacobians(device):
     phi_small = torch.Tensor([0.])
     phi_big = torch.Tensor([np.pi / 2])
 
@@ -172,7 +172,7 @@ def test_left_jacobians():
         torch.eye(2))
 
 
-def test_left_jacobians_batch():
+def test_left_jacobians_batch(device):
     phis = torch.Tensor([0., np.pi / 2])
 
     left_jacobian = SO2.left_jacobian(phis)
@@ -181,7 +181,7 @@ def test_left_jacobians_batch():
                           torch.eye(2).unsqueeze_(dim=0).expand(2, 2, 2))
 
 
-def test_exp_log():
+def test_exp_log(device):
     C_big = SO2.exp(torch.Tensor([np.pi / 4]))
     assert utils.allclose(SO2.exp(SO2.log(C_big)).mat, C_big.mat)
 
@@ -189,12 +189,12 @@ def test_exp_log():
     assert utils.allclose(SO2.exp(SO2.log(C_small)).mat, C_small.mat)
 
 
-def test_exp_log_batch():
+def test_exp_log_batch(device):
     C = SO2.exp(torch.Tensor([-1., 0., 1.]))
     assert utils.allclose(SO2.exp(SO2.log(C)).mat, C.mat)
 
 
-def test_perturb():
+def test_perturb(device):
     C = SO2.exp(torch.Tensor([np.pi / 4]))
     C_copy = copy.deepcopy(C)
     phi = torch.Tensor([0.1])
@@ -203,7 +203,7 @@ def test_perturb():
         C.as_matrix(), (SO2.exp(phi).dot(C_copy)).as_matrix())
 
 
-def test_perturb_batch():
+def test_perturb_batch(device):
     C = SO2.exp(torch.Tensor([-1., 0., 1.]))
     C_copy1 = copy.deepcopy(C)
     C_copy2 = copy.deepcopy(C)
@@ -219,14 +219,14 @@ def test_perturb_batch():
                           (SO2.exp(phis).dot(C)).as_matrix())
 
 
-def test_normalize():
+def test_normalize(device):
     C = SO2.exp(torch.Tensor([np.pi / 4]))
     C.mat.add_(0.1)
     C.normalize()
     assert SO2.is_valid_matrix(C.mat).all()
 
 
-def test_normalize_batch():
+def test_normalize_batch(device):
     C = SO2.exp(torch.Tensor([-1., 0., 1.]))
     assert SO2.is_valid_matrix(C.mat).all()
 
@@ -240,21 +240,21 @@ def test_normalize_batch():
     assert SO2.is_valid_matrix(C.mat).all()
 
 
-def test_inv():
+def test_inv(device):
     C = SO2.exp(torch.Tensor([np.pi / 4]))
     assert utils.allclose(C.dot(C.inv()).mat, SO2.identity().mat)
 
 
-def test_inv_batch():
+def test_inv_batch(device):
     C = SO2.exp(torch.Tensor([-1., 0., 1.]))
     assert utils.allclose(C.dot(C.inv()).mat, SO2.identity(C.mat.shape[0]).mat)
 
 
-def test_adjoint():
+def test_adjoint(device):
     C = SO2.exp(torch.Tensor([np.pi / 4]))
     assert (C.adjoint() == torch.Tensor([1.])).all()
 
 
-def test_adjoint_batch():
+def test_adjoint_batch(device):
     C = SO2.exp(torch.Tensor([-1., 0., 1.]))
     assert (C.adjoint() == torch.ones(C.mat.shape[0])).all()
